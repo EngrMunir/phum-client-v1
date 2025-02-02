@@ -1,45 +1,56 @@
 import { Button } from "antd";
-import { useForm } from "react-hook-form";
+import { FieldValues } from "react-hook-form";
 import { useLoginMutation } from "../redux/features/auth/authApi";
 import { useAppDispatch } from "../redux/features/hooks";
-import { setUser } from "../redux/features/auth/authSlice";
+import { setUser, TUser } from "../redux/features/auth/authSlice";
 import { verifyToken } from "../utils/verifyToken";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import PHForm from "../components/form/PHForm";
+import PHInput from "../components/form/PHInput";
 
 const Login = () => {
+    const navigate = useNavigate();
     const dispatch = useAppDispatch();
-    const { register, handleSubmit}= useForm({
-        defaultValues:{
-            userId:'A-002',
-            password:'admin123'
-        }
-    });
+    // const { register, handleSubmit}= useForm({
+    //     defaultValues:{
+    //         userId:'A-002',
+    //         password:'admin123'
+    //     }
+    // });
 
-    const [ login, { error } ] = useLoginMutation();
+    const [ login ] = useLoginMutation();
 
+    const onSubmit = async(data: FieldValues) =>{
+        const toastId= toast.loading('Logging in');
 
-    const onSubmit = async(data) =>{
+       try {
         const userInfo ={
             id:data.userId,
             password: data.password
         };
       const res = await login(userInfo).unwrap();
-      const user = verifyToken(res.data.accessToken);
+      const user = verifyToken(res.data.accessToken) as TUser;
 
       dispatch(setUser({user:user, token:res.data.accessToken}));
+        toast.success('Logged in',{id:toastId, duration:2000});
+
+      navigate(`/${user.role}/dashboard`);
+       } catch (err) {
+        toast.error('Something went wrong',{id:toastId, duration:2000});
+       }
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <PHForm onSubmit={onSubmit}>
             <div>
-                <label htmlFor="id">ID:</label>
-                <input type="text" id="id" {...register('id')}/>
+                <PHInput type="text" name="userId" label="ID:"/>
             </div>
             <div>
-                <label htmlFor="password">Password:</label>
-                <input type="text" id="password" {...register('password')}/>
+                <PHInput type="password" name="password" label="Password"/>
             </div>
             <Button htmlType="submit">Login</Button>
-        </form>
+        </PHForm>
     );
 };
 
